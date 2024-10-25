@@ -4,7 +4,7 @@
 
 一个开源硬件项目，帮助你制作自己的**太鼓达人**PC控制器。
 
-[查看繁体中文版](./README_ zh-Hant.md) | [查看日文版](./README_Japanese.md) | [View English Version](./README.md)
+[查看繁体中文版](./README_zh-Hant.md) | [查看日文版](./README_Japanese.md) | [View English Version](./README.md)
 
 ## 关于本项目
 
