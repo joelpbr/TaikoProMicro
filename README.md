@@ -1,4 +1,4 @@
-![Taiko Drum Controller](./images/banner-taiko.png)
+![Taiko Drum Controller](./images/ATMegaTaiko.png)
 
 # Taiko Drum Controller - Arduino Pro Micro (ATmega32U4)
 
