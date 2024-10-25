@@ -1,65 +1,73 @@
-![Taiko Drum Controller](./images/ATMegaTaiko.png)
-
 # Taiko Drum Controller - Arduino Pro Micro (ATmega32U4)
 
-Open-source hardware program to make your own Taiko no Tatsujin arcade controller for PC.
+![Taiko Drum Controller](./images/ATMegaTaiko.png)
+
+An open-source hardware project to build your own **Taiko no Tatsujin** arcade controller for PC gaming.
 
 ## About this Project
 
-This project aims to help you develop your own hardware taiko at home.
+This project guides you in creating a custom Taiko no Tatsujin controller to enjoy the arcade experience at home.
 
-**This program is for personal and non-commercial use only.**
+> **Note:** This project is for personal and non-commercial use only.
 
-## What You Need
+---
 
-1. An Arduino Micro/Leonardo (ATmega32U4).
+## Materials Needed
 
-2. 4 piezoelectric sensors.
-   
-3. 4 100kΩ resistors.
-      
-6. Necessary electronic components (breadboards and jumper wires, etc.).
-   
-7. Wood planks and cutting tools (only if you need to make your physical taiko drum from scratch). If you have an aftermarket Taiko Force Lv5, you can use them directly.
+To assemble your Taiko drum controller, you'll need:
 
-## Steps to Make the Controller
+1. **Arduino Micro/Leonardo** (with ATmega32U4 microcontroller)
+2. **4 piezoelectric sensors**
+3. **4 100kΩ resistors**
+4. Essential electronic components (e.g., breadboards, jumper wires)
+5. Wood planks and cutting tools (only if building the drum from scratch).  
+   > If you have an aftermarket Taiko Force Lv5, you can use it directly.
 
-1. Make the drum and firmly glue the 4 piezoelectric sensors to the drum. Refer to the image for preferred locations of the sensors.
-   
+---
+
+## Steps to Build the Controller
+
+1. **Prepare the Drum**  
+   Construct the drum and securely attach the 4 piezoelectric sensors to it. See the diagram below for recommended sensor placement.
+
    ![Sensor Setup](./images/piezo_locations.png)
 
-2. Connect the piezoelectric sensors and other components to the controller as follows (the polarity of the piezoelectric sensors don't matter);
+2. **Connect Components**  
+   Wire the piezoelectric sensors and other components to the Arduino as shown in the schematic below.  
+   > Note: Polarity doesn’t matter for the piezoelectric sensors. This setup is designed for Arduino Micro; if using another board, refer to its documentation.
 
-   The following schemes are for Arduino Micro boards. If you use a different board, refer to its documentations for the connection.
-   
-   ![Controller scheme](./images/scheme.png)
+   ![Controller Scheme](./images/scheme.png)
 
-3. Flash the firmware to the board.
-   
-   You may need to fine-tune some parameters like `SAMPLE_CACHE_LENGTH`, `HIT_THRES`, `RESET_THRES`, and `sensitivity`. See the following section for details. 
+3. **Flash the Firmware**  
+   Upload the firmware to the Arduino board. You may need to adjust parameters such as `SAMPLE_CACHE_LENGTH`, `HIT_THRES`, `RESET_THRES`, and `sensitivity` as described below.
 
-4. Have fun!
+4. **Enjoy!**  
+   Once configured, your controller is ready to use.
 
-## Tuning the Parameters
+---
 
-1. Hit and reset threshold
-   
-   Set `DEBUG 1` (this disables the keyboard output and sends signal values from the serial port), flash the firmware, roll on one of the 4 areas of the drum, and visualize the graph from the output of the serial monitor. The hit threshold should be lower than your heaviest hit on the drum, and the reset threshold should be greater than the trough between roll hits. The reset value should also be below the hit value.
-   
-   Repeat the process for the rest 3 areas and find the best one that fits all.
+## Parameter Tuning
+
+1. **Hit and Reset Thresholds**  
+   Set `DEBUG 1` to disable keyboard output and monitor signal values via the serial port. Roll across one of the drum’s 4 zones, visualizing the output graph from the serial monitor.  
+   - **Hit threshold**: Should be lower than your hardest hit.
+   - **Reset threshold**: Should be above the low point between hits (trough) and below the hit value.  
+
+   Repeat this process for each drum area to find optimal thresholds.
 
    ![Setting hit and reset values](./images/tune_hit_reset.png)
 
-2. Sampling length
-   
-   For maximum runtime speed, the `cache.h` library has been optimized to work with `SAMPLE_CACHE_LENGTH` window sizes of powers of 2. That means 2, 8, 16, and 32, etc. Practically 16 is the best value for Arduino, but if you have a powerful microcontroller that samples the input at the speed of at least 4000Hz or more, you can change the value to 32 for a smoother (in other words, less noisy) curve.
+2. **Sampling Length**  
+   In `cache.h`, set `SAMPLE_CACHE_LENGTH` to a power of 2 (e.g., 2, 8, 16, 32). A value of **16** is optimal for Arduino, but if you’re using a faster microcontroller (sampling at 4000Hz or more), you can set it to **32** for a smoother signal.
 
-3. Sensitivities
-   
-   Not all piezoelectric sensors are the same, and due to installation errors, the captured signals from the 4 sensors may vary significantly. The sensitivity values are multipliers to normalize the differences. In the following example, the right-don area generates a much higher value than the rest 3, so you can adjust `sensitivity` to `{1.0, 1.0, 0.5, 1.0}` to eliminate the issue.
+3. **Sensor Sensitivity**  
+   Sensor output can vary. Use the `sensitivity` parameter to normalize discrepancies. For example, if the **right-don** zone outputs higher values, adjust `sensitivity` to `{1.0, 1.0, 0.5, 1.0}` to balance the response.
 
    ![Setting sensitivity values](./images/tune_sensitivities.png)
 
-   Note that the installation of the sensors is very critical. You should make sure that the sensors are firmly attached on the wood and located properly.
+   > Proper sensor installation is critical. Ensure sensors are securely attached to the drum.
 
-4. Launch the game and enjoy!
+4. **Launch the Game**  
+   With tuning complete, start the game and enjoy your custom Taiko controller!
+
+--- 
