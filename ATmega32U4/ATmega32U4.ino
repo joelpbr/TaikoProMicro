@@ -19,12 +19,6 @@
 #define R_DON_IN A2
 #define R_KAT_IN A3
 
-// Output LED pins for each channel (for visualization)
-#define L_DON_LED 5
-#define L_KAT_LED 6
-#define R_DON_LED 7
-#define R_KAT_LED 8
-
 // Keyboard output for each channel
 #define L_DON_KEY 'f'
 #define L_KAT_KEY 'd'
@@ -44,7 +38,6 @@ unsigned long lastPower[CHANNELS];
 
 bool triggered[2];  // Separate triggered flags for left and right sides
 const byte inPins[] = {L_DON_IN, L_KAT_IN, R_DON_IN, R_KAT_IN};
-const byte outPins[] = {L_DON_LED, L_KAT_LED, R_DON_LED, R_KAT_LED};
 const char outKeys[] = {L_DON_KEY, L_KAT_KEY, R_DON_KEY, R_KAT_KEY};
 float sensitivities[] = {L_DON_SENS, L_KAT_SENS, R_DON_SENS, R_KAT_SENS};
 
@@ -68,7 +61,6 @@ void loop() {
     for (byte side = 0; side < 2; side++) {
         if (maxIndex[side] != -1 && lastPower[maxIndex[side]] < RESET_THRES) {
             triggered[side] = false;
-            digitalWrite(outPins[maxIndex[side]], LOW);
             maxIndex[side] = -1;
             maxPower[side] = 0;
         }
@@ -103,7 +95,6 @@ void loop() {
     for (byte side = 0; side < 2; side++) {
         if (!triggered[side] && maxPower[side] >= HIT_THRES) {
             triggered[side] = true;
-            digitalWrite(outPins[maxIndex[side]], HIGH);
 #if !DEBUG
             Keyboard.print(outKeys[maxIndex[side]]);
 #endif
