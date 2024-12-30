@@ -4,7 +4,7 @@
 
 An open-source hardware project to build your own **Taiko no Tatsujin** arcade controller for PC gaming.
 
-[查看繁体中文版](./README_Traditional_Chinese.md) | [查看簡體中文版](./README_Simplified_Chinese.md) | [查看日文版](./README_Japanese.md)
+[查看繁体中文版](./README_zh-Hant.md) | [查看簡體中文版](./README_zh-Hans.md) | [查看日文版](./README_Japanese.md)
 
 ## About this Project
 
