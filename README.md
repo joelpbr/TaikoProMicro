@@ -86,6 +86,25 @@ To assemble your Taiko drum controller, you'll need:
    - **Controller settings**: click **Connect over USB**, edit any setting — hit/reset thresholds, key hold, scan window, big notes, adaptive threshold, auto balance, per-zone sensitivities, and key bindings — and press **Update settings**. Changes apply instantly and are saved to the controller's EEPROM: **no recompiling or re-flashing needed**.
    - **Signal monitor**: streams live sensor power and the adaptive threshold from the controller, so you can tune thresholds without the Arduino IDE (this replaces the `DEBUG` workflow above for most users).
 
+   ![Companion app](./images/companion_en.png)
+
+   How settings behave:
+   - Editing a field sends nothing by itself — values are written to the drum only when you press **Update settings**, and they take effect **instantly** (the very next hit uses them; no reboot or reconnect needed).
+   - Saved settings live in the drum's EEPROM, not in the browser: they survive unplugging, switching PCs, and even re-flashing the firmware. When you reconnect, the page shows whatever the drum currently has.
+   - **Restore defaults** returns everything to the factory values below.
+
+   | Setting | Factory default |
+   |---|---|
+   | Hit threshold | 400 |
+   | Reset threshold | 100 |
+   | Key hold | 25 ms |
+   | Scan window | 1500 µs |
+   | Big notes (two-hand) | On |
+   | Adaptive threshold | On |
+   | Auto balance | On |
+   | Sensitivity (all 4 zones) | 100 % |
+   | Keys | D = left kat, F = left don, J = right don, K = right kat |
+
 7. **Launch the Game**  
    With tuning complete, start the game and enjoy your custom Taiko controller!
 
