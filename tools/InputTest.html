@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaikoProMicro Input Test</title>
+<style>
+  :root {
+    --don: #e33b2f;
+    --kat: #1e6fd8;
+    --panel: #fffef4;
+    --ink: #222;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo",
+                 "Microsoft YaHei", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      repeating-conic-gradient(#f0d431 0% 25%, #f7e97c 0% 50%) 0 0 / 96px 96px;
+    min-height: 100vh;
+    padding: 14px;
+  }
+  .app { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+  .box {
+    background: var(--panel);
+    border: 2px solid #b9a11a;
+    border-radius: 10px;
+    padding: 8px 14px;
+    box-shadow: 0 2px 0 rgba(0,0,0,.15);
+  }
+  .stat { display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-weight: 800; }
+  .stat small { font-size: 1rem; font-weight: 700; }
+  .stat .val { min-width: 3ch; text-align: right; }
+  input[type="number"], input[type="text"] {
+    font: inherit; font-weight: 700; width: 4.5em;
+    border: 2px solid #b9a11a; border-radius: 6px; padding: 2px 6px;
+    background: #fff;
+  }
+  button {
+    font: inherit; font-weight: 800; cursor: pointer;
+    background: #f2f2f2; border: 2px solid #999; border-radius: 8px;
+    padding: 6px 18px;
+  }
+  button:active { transform: translateY(1px); }
+  .lang button.on { border-color: #1e6fd8; box-shadow: 0 0 0 2px #a9ccf5; }
+
+  /* roll gauge */
+  .gauge { height: 34px; background: #191919; border-radius: 8px; border: 3px solid #111;
+           overflow: hidden; position: relative; }
+  .gauge .fill { height: 100%; width: 0%; background: linear-gradient(#ffe95e, #e8c714);
+                 border-radius: 0 6px 6px 0; transition: width 60ms linear; }
+
+  /* hit history */
+  .history { overflow-x: auto; padding: 10px 12px; }
+  .history table { border-collapse: collapse; }
+  .history th { font-size: .95rem; padding: 2px 10px 2px 2px; text-align: left; white-space: nowrap; }
+  .history th.don { color: var(--don); }
+  .history th.kat { color: var(--kat); }
+  .cell {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #fff; border: 1px solid #ddd;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #fff; font-size: .95rem;
+    margin: 3px;
+  }
+  .cell.don { background: var(--don); border-color: var(--don); }
+  .cell.kat { background: var(--kat); border-color: var(--kat); }
+
+  .bottom { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .graphbox { flex: 1 1 480px; padding: 10px; }
+  canvas { width: 100%; height: 260px; display: block; background: #faf6ea; border-radius: 6px; }
+
+  /* drum */
+  .drumwrap { flex: 0 1 360px; display: flex; justify-content: center; }
+  .drum { position: relative; width: 330px; height: 330px; }
+  .drum .outer { position: absolute; inset: 0; border-radius: 50%; background: #8ec2f2; }
+  .drum .inner { position: absolute; inset: 22%; border-radius: 50%; background: #e8382f; }
+  .drum .split { position: absolute; left: calc(50% - 3px); top: 0; width: 6px; height: 100%; background: #fff; }
+  .zone { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px;
+          transform: translate(-50%, -50%); }
+  .zone .key {
+    background: #f4f4f4; border: 2px solid #888; border-radius: 8px;
+    font-weight: 800; font-size: 1.4rem; padding: 4px 12px; min-width: 46px; text-align: center;
+  }
+  .zone .cnt { background: #fff; border: 2px solid #888; border-radius: 6px;
+               font-weight: 800; font-size: 1.2rem; padding: 1px 10px; min-width: 52px; text-align: center; }
+  .hint { text-align: center; font-weight: 700; padding: 6px; }
+  .hint.active { color: #1a7a1a; }
+
+  /* controller settings */
+  .settings .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+                     gap: 6px; margin: 10px 0; }
+  .settings .pgrid label { display: flex; justify-content: space-between; align-items: center;
+                           gap: 6px; background: #fff; border: 1px solid #d8cf9a;
+                           border-radius: 6px; padding: 4px 8px; font-weight: 700; }
+  .settings input[type="number"] { width: 5.5em; }
+  .settings input.keyfield { width: 2.5em; text-align: center; }
+  #connstat { font-weight: 700; align-self: center; }
+  #connstat.ok { color: #1a7a1a; }
+  #mon { height: 170px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="row" style="justify-content: space-between;">
+    <div class="row lang">
+      <button data-lang="zh">中文</button>
+      <button data-lang="ja" class="on">日本語</button>
+      <button data-lang="en">English</button>
+    </div>
+    <div class="row">
+      <div class="box stat"><small data-i18n="keys"></small>
+        <input type="text" id="keys" value="dfjk" maxlength="4" style="width:6em">
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="box stat"><span data-i18n="renda"></span>: <span class="val" id="roll">0</span></div>
+    <div class="box stat"><small data-i18n="interval"></small>
+      <input type="number" id="interval" value="2.0" min="0.2" step="0.1"></div>
+    <div class="box stat"><small data-i18n="duration"></small> <span class="val" id="dur">0.0</span></div>
+    <div class="box stat" style="margin-left:auto"><button id="clear" data-i18n="clear"></button></div>
+  </div>
+
+  <div class="gauge"><div class="fill" id="gauge"></div></div>
+
+  <div class="box hint" id="hint" tabindex="0"></div>
+
+  <div class="box history">
+    <table>
+      <tr><th data-i18n="overall"></th><td><div class="cells" id="row-all" style="display:flex"></div></td></tr>
+      <tr><th class="kat" data-i18n="lkat"></th><td><div class="cells" id="row-0" style="display:flex"></div></td></tr>
+      <tr><th class="don" data-i18n="ldon"></th><td><div class="cells" id="row-1" style="display:flex"></div></td></tr>
+      <tr><th class="don" data-i18n="rdon"></th><td><div class="cells" id="row-2" style="display:flex"></div></td></tr>
+      <tr><th class="kat" data-i18n="rkat"></th><td><div class="cells" id="row-3" style="display:flex"></div></td></tr>
+    </table>
+  </div>
+
+  <div class="box settings">
+    <div class="row">
+      <b style="align-self:center" data-i18n="settings"></b>
+      <button id="connect" data-i18n="connect"></button>
+      <span id="connstat"></span>
+    </div>
+    <div class="pgrid" id="paramgrid"></div>
+    <div class="row">
+      <button id="apply" data-i18n="apply" disabled></button>
+      <button id="defaults" data-i18n="defaults" disabled></button>
+      <label style="align-self:center; font-weight:700">
+        <input type="checkbox" id="montoggle" disabled> <span data-i18n="monitor"></span></label>
+    </div>
+    <canvas id="mon" width="1040" height="170" style="display:none"></canvas>
+  </div>
+
+  <div class="bottom">
+    <div class="box graphbox">
+      <canvas id="graph" width="640" height="260"></canvas>
+    </div>
+    <div class="drumwrap">
+      <div class="drum">
+        <div class="outer"></div><div class="inner"></div><div class="split"></div>
+        <div class="zone" style="left:14%; top:50%"><div class="key" id="k0">D</div><div class="cnt" id="c0">0</div></div>
+        <div class="zone" style="left:38%; top:50%"><div class="key" id="k1">F</div><div class="cnt" id="c1">0</div></div>
+        <div class="zone" style="left:62%; top:50%"><div class="key" id="k2">J</div><div class="cnt" id="c2">0</div></div>
+        <div class="zone" style="left:86%; top:50%"><div class="key" id="k3">K</div><div class="cnt" id="c3">0</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// Zones in display order: 0 = L-kat (D), 1 = L-don (F), 2 = R-don (J), 3 = R-kat (K).
+// Matches the firmware's default key layout d/f/j/k.
+const I18N = {
+  ja: { renda:"連打", interval:"間隔（s）", duration:"持続時間（s）", clear:"クリア",
+        overall:"総合", lkat:"左カッ", ldon:"左ドン", rdon:"右ドン", rkat:"右カッ",
+        keys:"キー", rate:"秒速", max:"最高", unit:"打/秒",
+        hint:"ここをクリックしてから太鼓を叩いてください",
+        active:"入力受付中 — 太鼓を叩いてください！",
+        settings:"コントローラー設定", connect:"USBケーブルで接続",
+        connected:"接続済み", disconnected:"未接続",
+        apply:"設定更新", defaults:"初期設定に戻す", monitor:"信号モニター",
+        noserial:"設定にはChromeまたはEdgeが必要です（Web Serial）",
+        saved:"保存しました ✔",
+        pHit:"命中閾値", pReset:"リセット閾値", pHold:"キー保持（ms）",
+        pScan:"判定窓（µs）", pDouble:"大音符（両手同時）", pAuto:"適応閾値",
+        pBalance:"オートバランス", pSens:"感度％", pKey:"キー" },
+  zh: { renda:"连打", interval:"间隔（s）", duration:"持续时间（s）", clear:"清除",
+        overall:"总合", lkat:"左咔", ldon:"左咚", rdon:"右咚", rkat:"右咔",
+        keys:"按键", rate:"每秒", max:"最高", unit:"打/秒",
+        hint:"先点击此处，然后敲击太鼓",
+        active:"正在接收输入 — 敲击太鼓吧！",
+        settings:"控制器设置", connect:"通过USB线连接",
+        connected:"已连接", disconnected:"未连接",
+        apply:"更新设置", defaults:"恢复默认", monitor:"信号监视",
+        noserial:"设置功能需要 Chrome 或 Edge（Web Serial）",
+        saved:"已保存 ✔",
+        pHit:"命中阈值", pReset:"重置阈值", pHold:"按键保持（ms）",
+        pScan:"判定窗口（µs）", pDouble:"大音符（双手同时）", pAuto:"自适应阈值",
+        pBalance:"自动平衡", pSens:"灵敏度％", pKey:"按键" },
+  en: { renda:"Roll", interval:"Gap (s)", duration:"Duration (s)", clear:"Clear",
+        overall:"All", lkat:"L-kat", ldon:"L-don", rdon:"R-don", rkat:"R-kat",
+        keys:"Keys", rate:"Rate", max:"Max", unit:"hits/s",
+        hint:"Click here, then hit the drum",
+        active:"Listening — hit the drum!",
+        settings:"Controller settings", connect:"Connect over USB",
+        connected:"Connected", disconnected:"Not connected",
+        apply:"Update settings", defaults:"Restore defaults", monitor:"Signal monitor",
+        noserial:"Settings need Chrome or Edge (Web Serial)",
+        saved:"Saved ✔",
+        pHit:"Hit threshold", pReset:"Reset threshold", pHold:"Key hold (ms)",
+        pScan:"Scan window (µs)", pDouble:"Big notes (two-hand)", pAuto:"Adaptive threshold",
+        pBalance:"Auto balance", pSens:"Sens %", pKey:"Key" },
+};
+let lang = "ja";
+const SIDE = ["L", "L", "R", "R"];
+const TYPE = ["kat", "don", "don", "kat"];
+const HISTORY_LEN = 20;
+
+const $ = id => document.getElementById(id);
+const counts = [0, 0, 0, 0];
+let hits = [];          // timestamps (ms) of every hit, for the rate graph
+let history = [];       // recent hits as zone indexes, newest last
+let rollCount = 0, rollStart = 0, lastHit = -1e12, maxRate = 0;
+
+function applyLang() {
+  const t = I18N[lang];
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t[el.dataset.i18n]; });
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("on", b.dataset.lang === lang));
+  renderHint(document.hasFocus());
+  refreshParamLabels();
+  setConnected(!!port);
+}
+document.querySelectorAll(".lang button").forEach(b =>
+  b.addEventListener("click", () => { lang = b.dataset.lang; applyLang(); }));
+
+function renderHint(active) {
+  const h = $("hint");
+  h.textContent = active ? I18N[lang].active : I18N[lang].hint;
+  h.classList.toggle("active", active);
+}
+window.addEventListener("focus", () => renderHint(true));
+window.addEventListener("blur", () => renderHint(false));
+
+function keyZone(k) {
+  const keys = $("keys").value.toLowerCase();
+  return keys.indexOf(k.toLowerCase());
+}
+
+function onHit(zone) {
+  const now = performance.now();
+  counts[zone]++;
+  $("c" + zone).textContent = counts[zone];
+  const gap = parseFloat($("interval").value) * 1000 || 2000;
+  if (now - lastHit > gap) { rollCount = 0; rollStart = now; }
+  rollCount++;
+  lastHit = now;
+  $("roll").textContent = rollCount;
+  $("dur").textContent = ((now - rollStart) / 1000).toFixed(1);
+  hits.push(now);
+  if (hits.length > 4000) hits = hits.slice(-2000);
+  history.push(zone);
+  if (history.length > HISTORY_LEN) history.shift();
+  renderHistory();
+}
+
+function renderHistory() {
+  const rows = { all: [], 0: [], 1: [], 2: [], 3: [] };
+  for (const z of history) {
+    rows.all.push(`<div class="cell ${TYPE[z]}">${SIDE[z]}</div>`);
+    for (let r = 0; r < 4; r++)
+      rows[r].push(r === z
+        ? `<div class="cell ${TYPE[z]}">${$("k" + z).textContent}</div>`
+        : `<div class="cell"></div>`);
+  }
+  $("row-all").innerHTML = rows.all.join("");
+  for (let r = 0; r < 4; r++) $("row-" + r).innerHTML = rows[r].join("");
+}
+
+window.addEventListener("keydown", e => {
+  if (e.repeat) return;
+  if (e.target.tagName === "INPUT") return;
+  const z = keyZone(e.key);
+  if (z >= 0 && z < 4) { onHit(z); e.preventDefault(); }
+});
+
+$("keys").addEventListener("input", () => {
+  const v = $("keys").value;
+  for (let i = 0; i < 4; i++) $("k" + i).textContent = (v[i] || "?").toUpperCase();
+});
+
+$("clear").addEventListener("click", () => {
+  counts.fill(0);
+  for (let i = 0; i < 4; i++) $("c" + i).textContent = "0";
+  hits = []; history = []; rollCount = 0; maxRate = 0; lastHit = -1e12;
+  $("roll").textContent = "0"; $("dur").textContent = "0.0";
+  renderHistory();
+});
+
+// ---- rate graph: hits per second over the last 10 seconds ----
+const cv = $("graph"), ctx = cv.getContext("2d");
+const SPAN = 10000;   // ms shown
+function rateAt(t) {  // hits in the second ending at t
+  let n = 0;
+  for (let i = hits.length - 1; i >= 0; i--) {
+    if (hits[i] > t) continue;
+    if (hits[i] <= t - 1000) break;
+    n++;
+  }
+  return n;
+}
+function drawGraph() {
+  const w = cv.width, h = cv.height, now = performance.now();
+  ctx.clearRect(0, 0, w, h);
+  const cur = rateAt(now);
+  if (cur > maxRate) maxRate = cur;
+  const yMax = Math.max(10, Math.ceil(maxRate * 1.15));
+  ctx.strokeStyle = "#c9c2ad"; ctx.lineWidth = 1;
+  ctx.font = "12px sans-serif"; ctx.fillStyle = "#776f57";
+  for (let g = 0; g <= 4; g++) {
+    const y = h - 18 - (h - 30) * g / 4;
+    ctx.beginPath(); ctx.setLineDash([4, 4]);
+    ctx.moveTo(34, y); ctx.lineTo(w - 6, y); ctx.stroke();
+    ctx.fillText(String(Math.round(yMax * g / 4)), 6, y + 4);
+  }
+  ctx.setLineDash([]);
+  for (let s = 0; s <= SPAN / 1000; s += 2) {
+    const x = 34 + (w - 40) * s / (SPAN / 1000);
+    ctx.fillText(s.toFixed(1) + "s", x - 8, h - 4);
+  }
+  ctx.strokeStyle = "#2b7de0"; ctx.lineWidth = 2.5; ctx.beginPath();
+  const t0 = now - SPAN;
+  for (let px = 0; px <= w - 40; px += 3) {
+    const t = t0 + SPAN * px / (w - 40);
+    const y = h - 18 - (h - 30) * Math.min(rateAt(t), yMax) / yMax;
+    px === 0 ? ctx.moveTo(34 + px, y) : ctx.lineTo(34 + px, y);
+  }
+  ctx.stroke();
+  const t = I18N[lang];
+  ctx.font = "bold 20px sans-serif"; ctx.fillStyle = "#333";
+  ctx.fillText(`${t.rate}: ${cur.toFixed(1)} ${t.unit}`, w / 2 - 90, h / 2 - 12);
+  ctx.fillText(`${t.max}: ${maxRate.toFixed(1)} ${t.unit}`, w / 2 - 90, h / 2 + 14);
+}
+
+// ---- controller settings over Web Serial (firmware serial protocol) ----
+// Firmware channel order is L_DON, L_KAT, R_DON, R_KAT.
+// Display zone order (D F J K) is L_KAT, L_DON, R_DON, R_KAT -> map below.
+const PARAMS = [
+  { n: "HIT",     label: t => t.pHit,                    kind: "num" },
+  { n: "RESET",   label: t => t.pReset,                  kind: "num" },
+  { n: "HOLD",    label: t => t.pHold,                   kind: "num" },
+  { n: "SCANUS",  label: t => t.pScan,                   kind: "num" },
+  { n: "DOUBLE",  label: t => t.pDouble,                 kind: "chk" },
+  { n: "AUTO",    label: t => t.pAuto,                   kind: "chk" },
+  { n: "BALANCE", label: t => t.pBalance,                kind: "chk" },
+  { n: "SENS1",   label: t => `${t.lkat} ${t.pSens}`,    kind: "num" },
+  { n: "SENS0",   label: t => `${t.ldon} ${t.pSens}`,    kind: "num" },
+  { n: "SENS2",   label: t => `${t.rdon} ${t.pSens}`,    kind: "num" },
+  { n: "SENS3",   label: t => `${t.rkat} ${t.pSens}`,    kind: "num" },
+  { n: "KEY1",    label: t => `${t.lkat} ${t.pKey}`,     kind: "key" },
+  { n: "KEY0",    label: t => `${t.ldon} ${t.pKey}`,     kind: "key" },
+  { n: "KEY2",    label: t => `${t.rdon} ${t.pKey}`,     kind: "key" },
+  { n: "KEY3",    label: t => `${t.rkat} ${t.pKey}`,     kind: "key" },
+];
+let port = null, writer = null, lineBuf = "";
+let monData = [];   // recent [lDon, lKat, rDon, rKat, thres] samples
+
+function buildParamGrid() {
+  $("paramgrid").innerHTML = PARAMS.map(p => {
+    const input = p.kind === "chk"
+      ? `<input type="checkbox" id="p-${p.n}">`
+      : p.kind === "key"
+        ? `<input type="text" class="keyfield" id="p-${p.n}" maxlength="1">`
+        : `<input type="number" id="p-${p.n}">`;
+    return `<label><span data-plabel="${p.n}"></span>${input}</label>`;
+  }).join("");
+}
+function refreshParamLabels() {
+  const t = I18N[lang];
+  document.querySelectorAll("[data-plabel]").forEach(el => {
+    const p = PARAMS.find(x => x.n === el.dataset.plabel);
+    el.textContent = p.label(t);
+  });
+}
+function setConnected(on) {
+  $("connstat").textContent = I18N[lang][on ? "connected" : "disconnected"];
+  $("connstat").className = on ? "ok" : "";
+  ["apply", "defaults", "montoggle"].forEach(id => $(id).disabled = !on);
+}
+
+async function send(cmd) {
+  if (writer) await writer.write(new TextEncoder().encode(cmd + "\n"));
+}
+function handleLine(line) {
+  if (line.startsWith("S,")) {
+    const v = line.slice(2).split(",").map(Number);
+    if (v.length === 5 && v.every(Number.isFinite)) {
+      monData.push(v);
+      if (monData.length > 500) monData.shift();
+    }
+    return;
+  }
+  const eq = line.indexOf("=");
+  if (eq > 0) {
+    const name = line.slice(0, eq), val = line.slice(eq + 1);
+    const el = $("p-" + name);
+    if (!el) return;
+    if (el.type === "checkbox") el.checked = val !== "0";
+    else el.value = val;
+    if (name.startsWith("KEY")) syncKeysField();
+  }
+}
+function syncKeysField() {
+  // top "keys" field uses display order D F J K = KEY1 KEY0 KEY2 KEY3
+  const order = ["KEY1", "KEY0", "KEY2", "KEY3"];
+  const s = order.map(n => ($("p-" + n) && $("p-" + n).value) || "?").join("");
+  if (!s.includes("?")) {
+    $("keys").value = s;
+    for (let i = 0; i < 4; i++) $("k" + i).textContent = s[i].toUpperCase();
+  }
+}
+async function readLoop() {
+  const decoder = new TextDecoder();
+  const reader = port.readable.getReader();
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      lineBuf += decoder.decode(value);
+      let i;
+      while ((i = lineBuf.indexOf("\n")) >= 0) {
+        handleLine(lineBuf.slice(0, i).trim());
+        lineBuf = lineBuf.slice(i + 1);
+      }
+    }
+  } catch (e) { /* device unplugged */ }
+  try { reader.releaseLock(); } catch (e) {}
+  try { writer && writer.releaseLock(); } catch (e) {}
+  try { await port.close(); } catch (e) {}
+  port = null; writer = null;
+  setConnected(false);
+}
+$("connect").addEventListener("click", async () => {
+  if (!("serial" in navigator)) { $("connstat").textContent = I18N[lang].noserial; return; }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    writer = port.writable.getWriter();
+    readLoop();
+    setConnected(true);
+    await send("GET");
+  } catch (e) {
+    port = null; writer = null;
+    setConnected(false);
+  }
+});
+$("apply").addEventListener("click", async () => {
+  for (const p of PARAMS) {
+    const el = $("p-" + p.n);
+    const val = p.kind === "chk" ? (el.checked ? 1 : 0)
+              : p.kind === "key" ? (el.value || "?")[0]
+              : parseInt(el.value, 10);
+    if (val === "?" || (p.kind === "num" && !Number.isFinite(val))) continue;
+    await send(`SET ${p.n} ${val}`);
+  }
+  await send("SAVE");
+  await send("GET");
+  $("connstat").textContent = I18N[lang].saved;
+  setTimeout(() => setConnected(!!port), 1500);
+});
+$("defaults").addEventListener("click", async () => {
+  await send("DEFAULTS");
+  await send("SAVE");
+  await send("GET");
+});
+$("montoggle").addEventListener("change", async () => {
+  const on = $("montoggle").checked;
+  monData = [];
+  $("mon").style.display = on ? "block" : "none";
+  await send("MON " + (on ? 1 : 0));
+});
+
+const MON_COLORS = ["#e33b2f", "#1e6fd8", "#f0912d", "#12a5a0"];
+function drawMonitor() {
+  if (!$("montoggle").checked) return;
+  const mv = $("mon"), c = mv.getContext("2d");
+  const w = mv.width, h = mv.height;
+  c.clearRect(0, 0, w, h);
+  c.fillStyle = "#faf6ea"; c.fillRect(0, 0, w, h);
+  if (!monData.length) return;
+  let yMax = 100;
+  for (const s of monData) for (const v of s) if (v > yMax) yMax = v;
+  const x0 = 6, step = (w - 12) / 500;
+  for (let ch = 0; ch < 5; ch++) {
+    c.strokeStyle = ch < 4 ? MON_COLORS[ch] : "#333";
+    c.lineWidth = ch < 4 ? 1.6 : 1.2;
+    c.setLineDash(ch < 4 ? [] : [5, 4]);
+    c.beginPath();
+    monData.forEach((s, i) => {
+      const y = h - 4 - (h - 10) * Math.min(s[ch], yMax) / yMax;
+      i === 0 ? c.moveTo(x0 + i * step, y) : c.lineTo(x0 + i * step, y);
+    });
+    c.stroke();
+  }
+  c.setLineDash([]);
+}
+
+function tick() {
+  const now = performance.now();
+  const gap = parseFloat($("interval").value) * 1000 || 2000;
+  const frac = Math.max(0, 1 - (now - lastHit) / gap);
+  $("gauge").style.width = (frac * 100) + "%";
+  drawGraph();
+  drawMonitor();
+  requestAnimationFrame(tick);
+}
+buildParamGrid();
+applyLang();
+setConnected(false);
+if (!("serial" in navigator)) $("connstat").textContent = I18N[lang].noserial;
+renderHistory();
+tick();
+</script>
+</body>
+</html>
